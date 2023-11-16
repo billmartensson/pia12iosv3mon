@@ -16,9 +16,7 @@ struct ContentView: View {
     
     @State var showjoke = false
     
-    var isPreview: Bool {
-        return ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-    }
+    
     
     var body: some View {
         
@@ -26,7 +24,7 @@ struct ContentView: View {
             VStack {
                 VStack {
                     if apistuff.thejoke != nil {
-                        Text(apistuff.thejoke!.created_at)
+                        Text(ChuckHelper().fixdate(indate: apistuff.thejoke!.created_at))
                         Text(apistuff.thejoke!.value)
                         
                         Button(action: {
@@ -41,7 +39,7 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/)
                 .frame(height: 200.0)
-                .background(Color.gray)
+                .background(Color.fancyBlue)
 
                 if apistuff.errormessage != "" {
                     VStack {
@@ -73,6 +71,7 @@ struct ContentView: View {
                 }, label: {
                     Text("Random joke")
                 })
+                
                 
                 List {
                     ForEach(apistuff.jokecategories, id: \.self) { cat in
@@ -116,7 +115,14 @@ struct ContentView: View {
         .onAppear() {
             apistuff.loadcategories()
         }
-        
+        .onChange(of: apistuff.isloading) { oldValue, newValue in
+            if(apistuff.isloading) {
+                print("Nu ladda")
+            } else {
+                print("Inte ladda mer")
+            }
+            
+        }
         
     }
     

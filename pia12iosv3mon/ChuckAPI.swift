@@ -21,7 +21,7 @@ class ChuckAPI : ObservableObject {
     */
     
     
-    var isPreview = false
+    
     
     @Published var isloading = false
     
@@ -33,7 +33,7 @@ class ChuckAPI : ObservableObject {
     
     func loadcategories() {
         Task {
-            if isPreview {
+            if ChuckHelper().isPreview {
                 jokecategories = ["A", "B", "C"]
                 return
             }
@@ -85,7 +85,7 @@ class ChuckAPI : ObservableObject {
     
     func loadapi(apiurlstring : String) async {
         
-        if isPreview {
+        if ChuckHelper().isPreview {
             thejoke = Chucknorrisinfo(id: "aaa", created_at: "xxx", value: "Joke joke joke")
             return
         }
