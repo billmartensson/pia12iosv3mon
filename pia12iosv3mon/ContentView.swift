@@ -9,16 +9,12 @@ import SwiftUI
 
 
 struct ContentView: View {
-    
-    @State var thejoke : Chucknorrisinfo?
-    
-    @State var jokecategories = [String]()
-    
+        
     @State var searchtext = ""
     
-    @State var errormessage = ""
+    @StateObject var apistuff = ChuckAPI()
     
-    @State var isloading = false
+    @State var showjoke = false
     
     var isPreview: Bool {
         return ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -28,47 +24,58 @@ struct ContentView: View {
         
         ZStack {
             VStack {
-                
                 VStack {
-                    if thejoke != nil {
-                        Text(thejoke!.created_at)
-                        Text(thejoke!.value)
+                    if apistuff.thejoke != nil {
+                        Text(apistuff.thejoke!.created_at)
+                        Text(apistuff.thejoke!.value)
+                        
+                        Button(action: {
+                            showjoke = true
+                        }, label: {
+                            Text("Show joke")
+                        })
+                        .sheet(isPresented: $showjoke, content: {
+                            ShowJokeView(bigapi: apistuff)
+                        })
                     }
                 }
                 .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/)
                 .frame(height: 200.0)
                 .background(Color.gray)
 
-                if errormessage != "" {
+                if apistuff.errormessage != "" {
                     VStack {
-                        Text(errormessage)
+                        Text(apistuff.errormessage)
                             .foregroundColor(Color.white)
                     }
                     .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/)
                     .frame(height: 100.0)
                     .background(Color.red)
-
+                    
                 }
 
                 
                 HStack {
                     TextField("Search joke...", text: $searchtext)
+                        .onChange(of: searchtext) { oldValue, newValue in
+                            print("Changing from \(oldValue) to \(newValue)")
+                        }
                     
                     Button(action: {
-                        loadapiForSearch(jokesearch: searchtext)
+                        apistuff.loadapiForSearch(jokesearch: searchtext)
                     }, label: {
                         Text("Search")
                     })
                 }
                 
                 Button(action: {
-                    loadapiRandom()
+                    apistuff.loadapiRandom()
                 }, label: {
                     Text("Random joke")
                 })
                 
                 List {
-                    ForEach(jokecategories, id: \.self) { cat in
+                    ForEach(apistuff.jokecategories, id: \.self) { cat in
                         /*
                         Button(action: {
                             loadapiForCategory(jokecat: cat)
@@ -83,7 +90,7 @@ struct ContentView: View {
                         .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/)
                         .frame(height: 80)
                         .onTapGesture {
-                            loadapiForCategory(jokecat: cat)
+                            apistuff.loadapiForCategory(jokecat: cat)
                         }
                         
                     }
@@ -94,7 +101,7 @@ struct ContentView: View {
             }
             .padding()
             
-            if isloading {
+            if apistuff.isloading {
                 VStack {
                     Text("LOADING...")
                     ProgressView()
@@ -107,135 +114,13 @@ struct ContentView: View {
             
         }
         .onAppear() {
-            Task {
-                await loadcategories()
-            }
+            apistuff.loadcategories()
         }
         
         
     }
     
-    func loadcategories() async {
-        
-        if isPreview {
-            jokecategories = ["A", "B", "C"]
-            return
-        }
-        
-        let apiurl = URL(string: "https://api.chucknorris.io/jokes/categories")!
-        
-        isloading = true
-        do {
-            let (data, _) = try await URLSession.shared.data(from: apiurl)
-                        
-            let decoder = JSONDecoder()
-            
-            if let categories = try? decoder.decode([String].self, from: data) {
-                                
-                jokecategories = categories
-            }
-            
-            isloading = false
-            
-        } catch {
-            print("Fel fel")
-        }
-    }
     
-    func loadapiForSearch(jokesearch : String) {
-        Task {
-            await loadapi(apiurlstring: "https://api.chucknorris.io/jokes/search?query="+jokesearch)
-
-        }
-    }
-    
-    func loadapiForCategory(jokecat : String) {
-        Task {
-            await loadapi(apiurlstring: "https://api.chucknorris.io/jokes/random?category="+jokecat)
-
-        }
-    }
-    
-    
-    func loadapiRandom() {
-        Task {
-            await loadapi(apiurlstring: "https://api.chucknorris.io/jokes/random")
-
-        }
-    }
-    
-    func loadapi(apiurlstring : String) async {
-        
-        if isPreview {
-            thejoke = Chucknorrisinfo(id: "aaa", created_at: "xxx", value: "Joke joke joke")
-            return
-        }
-        
-        errormessage = ""
-        
-        let apiurl = URL(string: apiurlstring)!
-        
-        do {
-            isloading = true
-            let (data, _) = try await URLSession.shared.data(from: apiurl)
-                        
-            let decoder = JSONDecoder()
-            
-            if let chuckthing = try? decoder.decode(Chucknorrisinfo.self, from: data) {
-                                
-                thejoke = chuckthing
-            }
-            if let chuckthing = try? decoder.decode(ChucknorrisSearchresult.self, from: data) {
-                
-                if chuckthing.result.count > 0 {
-                    thejoke = chuckthing.result[0]
-                } else {
-                    errormessage = "Nothing found!"
-                }
-            }
-            isloading = false
-
-        } catch {
-            print("Fel fel")
-        }
-    }
-    
-    
-    func oldloadapi() async {
-        print("load api stuff")
-        
-        let apiurl = URL(string: "https://api.chucknorris.io/jokes/random")!
-        
-        /*
-        do {
-            let apistring = try String(contentsOf: apiurl)
-            print(apistring)
-            joketext = apistring
-        } catch {
-            print("Nu blev det fel")
-        }
-         */
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: apiurl)
-            
-            print(data.count)
-            
-            let decoder = JSONDecoder()
-            
-            if let chuckthing = try? decoder.decode(Chucknorrisinfo.self, from: data) {
-                
-                print(chuckthing.value)
-                
-                //joketext = chuckthing.value
-            }
-            
-            
-            
-        } catch {
-            print("Fel fel")
-        }
-    }
 }
 
 #Preview {
@@ -244,15 +129,3 @@ struct ContentView: View {
 
 
 
-
-struct Chucknorrisinfo : Codable {
-    var id : String
-    var created_at : String
-    var value : String
-}
-
-
-struct ChucknorrisSearchresult : Codable {
-    var total : Int
-    var result : [Chucknorrisinfo]
-}
